@@ -1,0 +1,12 @@
+{
+  "id": "./",
+  "name": "Kalkulator masy profili stalowych",
+  "short_name": "Profile stalowe",
+  "description": "Przeliczanie masy, długości i liczby sztang profili stalowych.",
+  "lang": "pl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#174a82"
+}

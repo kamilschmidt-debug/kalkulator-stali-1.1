@@ -10,116 +10,102 @@
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    padding: max(16px, env(safe-area-inset-top))
-             max(16px, env(safe-area-inset-right))
-             max(16px, env(safe-area-inset-bottom))
-             max(16px, env(safe-area-inset-left));
+    padding: max(14px, env(safe-area-inset-top))
+             max(14px, env(safe-area-inset-right))
+             max(18px, env(safe-area-inset-bottom))
+             max(14px, env(safe-area-inset-left));
     font: 16px system-ui, sans-serif;
     color: #182433;
-    background: #fff;
+    background: #f4f7fb;
   }
-  h1 { font-size: 1.6rem; }
-  .filtry {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 10px;
-    margin: 16px 0;
-  }
-  .przyciski-lewe { display: grid; gap: 6px; }
+  main { max-width: 42rem; margin: 0 auto; }
+  h1 { margin: 0 0 8px; font-size: 1.45rem; }
+  .opis { margin: 0 0 14px; }
+  .filtry, .pola, .sumy { display: grid; gap: 8px; }
+  .filtry { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pelna { grid-column: 1 / -1; }
   button, input, select {
-    font: inherit;
+    width: 100%;
+    min-width: 0;
     min-height: 44px;
-    padding: 7px 9px;
-    border: 1px solid #9aabbd;
-    border-radius: 6px;
-    color: inherit;
+    padding: 8px;
+    border: 1px solid #8293a6;
+    border-radius: 8px;
     background: #fff;
+    color: inherit;
+    font: inherit;
   }
   button { cursor: pointer; }
-  button[aria-pressed="true"] {
+  #wydruk, button[aria-pressed="true"] {
     background: #174a82;
-    color: white;
     border-color: #174a82;
+    color: #fff;
   }
-  #szukaj { max-width: 100%; }
-  #wyczysc { margin-left: auto; }
-  #komunikat:empty { display: none; }
-  .tabela { overflow: auto; max-height: 68vh; border: 1px solid #ccd5df; }
-  table { width: 100%; border-collapse: separate; border-spacing: 0; }
-  thead { position: sticky; top: 0; z-index: 1; background: #edf3fa; }
-  th, td {
-    padding: 8px 10px;
-    border-bottom: 1px solid #dce3eb;
-    text-align: right;
-    white-space: nowrap;
+  .sumy, .pola { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sumy {
+    margin: 12px 0;
+    padding: 10px;
+    border-radius: 10px;
+    background: #dceafb;
   }
-  th:first-child, td:first-child { text-align: left; }
-  .sumy th, .sumy td { background: #d5e7fa; font-weight: 700; }
-  tbody tr:nth-child(even) { background: #f7f9fc; }
-  td input { width: 8em; text-align: right; }
-  td input:not(:placeholder-shown) { background: #dff1ff; }
+  .sumy div { min-width: 0; overflow-wrap: anywhere; }
+  .sumy strong { display: block; font-variant-numeric: tabular-nums; }
+  .podpis, .pola label { font-size: .82rem; }
+  .karta {
+    min-width: 0;
+    margin: 0 0 8px;
+    padding: 10px;
+    border: 1px solid #cbd6e2;
+    border-radius: 10px;
+    background: #fff;
+  }
+  .karta h2 { margin: 0 0 7px; font-size: 1rem; overflow-wrap: anywhere; }
+  .pola label { display: grid; min-width: 0; gap: 3px; }
+  .pola input { text-align: right; font-size: 16px; }
+  .pola input:not(:placeholder-shown) { background: #e7f3ff; }
   input[aria-invalid="true"] { outline: 2px solid #b42318; }
-  [hidden] { display: none !important; }
+  #komunikat:empty, [hidden] { display: none !important; }
+  #offline { font-size: .85rem; }
+  @media (max-width: 320px) {
+    .filtry { grid-template-columns: minmax(0, 1fr); }
+  }
 </style>
 </head>
 <body>
 <main>
-<h1>Kalkulator masy profili stalowych</h1>
-<p>Wpisz liczbę sztang, długość lub masę. Pozostałe dwa pola przeliczą się
-   automatycznie. Możesz używać przecinka albo kropki.</p>
+  <h1>Kalkulator masy profili stalowych</h1>
+  <p class="opis">Wpisz sztangi, metry lub kilogramy. Pozostałe pola przeliczą się automatycznie. Jedna sztanga ma 6 m.</p>
 
-<div class="filtry">
-  <div class="przyciski-lewe">
-    <button id="wydruk" type="button">Wydruk TXT</button>
+  <div class="filtry">
     <button id="typowe" type="button" aria-pressed="true">Profile typowe</button>
+    <button id="wydruk" type="button">Eksport TXT</button>
+    <select id="rodzaj" aria-label="Rodzaj profilu">
+      <option value="">Wszystkie rodzaje</option>
+      <option>Kwadratowy</option>
+      <option>Prostokątny</option>
+      <option>Okrągły</option>
+      <option>Płaskoowalny</option>
+      <option>Półowalny</option>
+    </select>
+    <button id="wyczysc" type="button">Wyczyść wpisy</button>
+    <input id="szukaj" class="pelna" type="search" aria-label="Szukaj profilu"
+           placeholder="np. 40x20 lub fi76">
   </div>
-  <select id="rodzaj" aria-label="Rodzaj profilu">
-    <option value="">Wszystkie rodzaje</option>
-    <option>Kwadratowy</option>
-    <option>Prostokątny</option>
-    <option>Okrągły</option>
-    <option>Płaskoowalny</option>
-    <option>Półowalny</option>
-  </select>
-  <input id="szukaj" type="search" aria-label="Szukaj profilu"
-         placeholder="np. 40x20 lub fi76">
-  <button id="wyczysc" type="button">Wyczyść</button>
-</div>
 
-<p id="komunikat" role="status"></p>
-<p id="brak" hidden>Brak profili pasujących do wybranych filtrów.</p>
-<p><small>Na telefonie przesuń tabelę w bok, aby zobaczyć pola do wpisania.</small></p>
+  <section aria-label="Podsumowanie wszystkich wpisów">
+    <div class="sumy">
+      <div><span class="podpis">Sztangi</span><strong id="suma-szt">0</strong></div>
+      <div><span class="podpis">Długość</span><strong id="suma-m">0 m</strong></div>
+      <div><span class="podpis">Masa</span><strong id="suma-kg">0 kg</strong></div>
+    </div>
+    <p class="podpis">Sumy obejmują też wpisy ukryte przez filtry.</p>
+  </section>
 
-<div class="tabela" tabindex="0" role="region" aria-label="Przewijana tabela profili">
-<table>
-  <thead>
-    <tr>
-      <th scope="col">Rodzaj i przekrój [mm]</th>
-      <th scope="col">Ścianka [mm]</th>
-      <th scope="col">Masa 1 m [kg/m]</th>
-      <th scope="col">Masa sztangi 6 m [kg]</th>
-      <th scope="col">Liczba sztang</th>
-      <th scope="col">Długość łącznie [m]</th>
-      <th scope="col">Masa łącznie [kg]</th>
-    </tr>
-    <tr class="sumy">
-      <th colspan="4" scope="row">Suma wszystkich wpisów, także ukrytych</th>
-      <td id="suma-szt">0</td>
-      <td id="suma-m">0 m</td>
-      <td id="suma-kg">0 kg</td>
-    </tr>
-  </thead>
-  <tbody id="wiersze"></tbody>
-</table>
-</div>
+  <p id="komunikat" role="status"></p>
+  <p id="offline" hidden>Gotowe do pracy bez internetu.</p>
+  <p id="brak" hidden>Brak pasujących profili. Spróbuj wyłączyć filtr „Profile typowe”.</p>
 
-<p><small>Ułamkowa liczba sztang oznacza równoważnik długości, nie liczbę
-  pełnych sztang do zamówienia. Masy profili kwadratowych, prostokątnych
-  i okrągłych są teoretyczne. Masy profili owalnych pochodzą z podanego
-  zestawienia. Tylko w pliku TXT masa każdej pozycji jest zaokrąglana
-  w górę do wielokrotności 10 kg. Wpisy nie są zapisywane po odświeżeniu.</small></p>
-<p id="offline" hidden><small>Gotowe do pracy bez internetu.</small></p>
+  <div id="profile" aria-label="Lista profili"></div>
 </main>
 
 <script>
@@ -128,7 +114,13 @@
 const $ = id => document.getElementById(id);
 const DLUGOSC = 6;
 const SCIANKI = [1, 1.5, 2, 3];
+const KLUCZE = ["szt", "m", "kg"];
 const profile = [];
+const widok = new Intl.NumberFormat("pl-PL", { maximumFractionDigits: 3 });
+const doPola = new Intl.NumberFormat("pl-PL", {
+  useGrouping: false,
+  maximumFractionDigits: 6
+});
 
 const typowe = new Set([
   ...[10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
@@ -143,7 +135,8 @@ const typowe = new Set([
 
 function dodaj(rodzaj, przekroj, t, kgNaM) {
   profile.push({
-    rodzaj, nazwa: `${rodzaj} ${przekroj}`, t, kgNaM,
+    rodzaj, przekroj, t, kgNaM,
+    nazwa: `${rodzaj} ${przekroj}`,
     typowy: t === 1.5 && typowe.has(`${rodzaj}|${przekroj}`),
     wpisany: false, szt: 0, m: 0, kg: 0
   });
@@ -162,7 +155,6 @@ const masaZPola = pole => pole * 7850 / 1e6;
 
 function dodajCzworokat(rodzaj, a, b) {
   for (const t of SCIANKI) {
-    // Teoretyczne promienie naroży: zewnętrzny 2t, wewnętrzny t.
     const pole = a * b - (a - 2 * t) * (b - 2 * t)
       - (4 - Math.PI) * 3 * t ** 2;
     dodaj(rodzaj, `${a}×${b}`, t, masaZPola(pole));
@@ -186,19 +178,12 @@ for (const d of srednice.sort((a, b) => a - b)) {
   }
 }
 
-const widok = new Intl.NumberFormat("pl-PL", { maximumFractionDigits: 3 });
-const doPola = new Intl.NumberFormat("pl-PL", {
-  useGrouping: false, maximumFractionDigits: 6
-});
-
 function obliczSumy(lista) {
-  let szt = 0, m = 0, kg = 0;
+  const suma = { szt: 0, m: 0, kg: 0 };
   for (const p of lista) {
-    szt += p.szt;
-    m += p.m;
-    kg += p.kg;
+    for (const klucz of KLUCZE) suma[klucz] += p[klucz];
   }
-  return { szt, m, kg };
+  return suma;
 }
 
 function aktualizujSumy() {
@@ -208,50 +193,24 @@ function aktualizujSumy() {
   $("suma-kg").textContent = `${widok.format(kg)} kg`;
 }
 
-function stworzWiersz(p) {
-  p.tr = $("wiersze").insertRow();
-  p.pola = {};
-
-  for (const tekst of [
-    p.nazwa, widok.format(p.t), widok.format(p.kgNaM),
-    widok.format(p.kgNaM * DLUGOSC)
-  ]) {
-    p.tr.insertCell().textContent = tekst;
-  }
-
-  for (const [klucz, etykieta] of [
-    ["szt", "Liczba sztang"],
-    ["m", "Długość łącznie w metrach"],
-    ["kg", "Masa łącznie w kilogramach"]
-  ]) {
-    const input = document.createElement("input");
-    input.type = "text";
-    input.inputMode = "decimal";
-    input.autocomplete = "off";
-    input.placeholder = "—";
-    input.setAttribute("aria-label",
-      `${etykieta}: ${p.nazwa}, ${widok.format(p.t)} mm`);
-    p.tr.insertCell().append(input);
-    p.pola[klucz] = input;
-    input.addEventListener("input", () => przelicz(p, klucz));
-  }
-}
-
 function przelicz(p, zrodlo) {
   $("komunikat").textContent = "";
   const tekst = p.pola[zrodlo].value.replace(/\s/g, "");
   const n = Number(tekst.replace(",", "."));
   const m = zrodlo === "m" ? n : zrodlo === "szt" ? n * DLUGOSC : n / p.kgNaM;
-  const szt = zrodlo === "szt" ? n : m / DLUGOSC;
-  const kg = zrodlo === "kg" ? n : m * p.kgNaM;
-  const wyniki = { szt, m, kg };
+  const wyniki = {
+    szt: zrodlo === "szt" ? n : m / DLUGOSC,
+    m,
+    kg: zrodlo === "kg" ? n : m * p.kgNaM
+  };
   const poprawne = /^(?:\d+(?:[.,]\d*)?|[.,]\d+)$/.test(tekst)
     && Object.values(wyniki).every(Number.isFinite);
 
   p.wpisany = poprawne;
   p.zrodlo = zrodlo;
 
-  for (const [klucz, input] of Object.entries(p.pola)) {
+  for (const klucz of KLUCZE) {
+    const input = p.pola[klucz];
     input.removeAttribute("aria-invalid");
     p[klucz] = poprawne ? wyniki[klucz] : 0;
     if (klucz !== zrodlo) input.value = poprawne ? doPola.format(p[klucz]) : "";
@@ -263,103 +222,135 @@ function przelicz(p, zrodlo) {
   aktualizujSumy();
 }
 
-profile.forEach(stworzWiersz);
-
 function normalizuj(s) {
   return s.toLowerCase().replace(/×/g, "x").replace(/[ø⌀]/g, "fi")
     .replace(/,/g, ".").replace(/\s/g, "");
 }
 
+function stworzKarte(p, i) {
+  const karta = document.createElement("section");
+  karta.className = "karta";
+  const tytul = document.createElement("h2");
+  tytul.id = `profil-${i}`;
+  tytul.textContent = `${p.nazwa} · ścianka ${widok.format(p.t)} mm`;
+  karta.setAttribute("aria-labelledby", tytul.id);
+
+  const pola = document.createElement("div");
+  pola.className = "pola";
+  p.pola = {};
+
+  for (const [klucz, opis] of [["szt", "Sztangi"], ["m", "Metry"], ["kg", "Kilogramy"]]) {
+    const etykieta = document.createElement("label");
+    const podpis = document.createElement("span");
+    podpis.id = `${tytul.id}-${klucz}`;
+    podpis.textContent = opis;
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.inputMode = "decimal";
+    input.autocomplete = "off";
+    input.placeholder = "—";
+    input.setAttribute("aria-labelledby", `${podpis.id} ${tytul.id}`);
+    input.addEventListener("input", () => przelicz(p, klucz));
+
+    etykieta.append(podpis, input);
+    pola.append(etykieta);
+    p.pola[klucz] = input;
+  }
+
+  karta.append(tytul, pola);
+  p.karta = karta;
+  p.szukany = normalizuj(`${p.nazwa}×${p.t}`);
+  return karta;
+}
+
+const karty = document.createDocumentFragment();
+profile.forEach((p, i) => karty.append(stworzKarte(p, i)));
+$("profile").append(karty);
+
 function filtruj() {
   const tylkoTypowe = $("typowe").getAttribute("aria-pressed") === "true";
+  const rodzaj = $("rodzaj").value;
   const zapytanie = normalizuj($("szukaj").value);
-  const wybranyRodzaj = $("rodzaj").value;
   let widoczne = 0;
 
   for (const p of profile) {
-    p.tr.hidden = (tylkoTypowe && !p.typowy)
-      || (wybranyRodzaj !== "" && p.rodzaj !== wybranyRodzaj)
-      || !normalizuj(`${p.nazwa}×${p.t}`).includes(zapytanie);
-    if (!p.tr.hidden) widoczne++;
+    p.karta.hidden = (tylkoTypowe && !p.typowy)
+      || (rodzaj !== "" && p.rodzaj !== rodzaj)
+      || !p.szukany.includes(zapytanie);
+    if (!p.karta.hidden) widoczne++;
   }
   $("brak").hidden = widoczne !== 0;
 }
 
 $("typowe").addEventListener("click", () => {
-  const wlaczony = $("typowe").getAttribute("aria-pressed") === "true";
-  $("typowe").setAttribute("aria-pressed", String(!wlaczony));
+  const przycisk = $("typowe");
+  const wlaczony = przycisk.getAttribute("aria-pressed") === "true";
+  przycisk.setAttribute("aria-pressed", String(!wlaczony));
   filtruj();
 });
-$("szukaj").addEventListener("input", filtruj);
 $("rodzaj").addEventListener("change", filtruj);
+$("szukaj").addEventListener("input", filtruj);
 
 $("wyczysc").addEventListener("click", () => {
   for (const p of profile) {
     p.wpisany = false;
-    for (const [klucz, input] of Object.entries(p.pola)) {
+    for (const klucz of KLUCZE) {
       p[klucz] = 0;
-      input.value = "";
-      input.removeAttribute("aria-invalid");
+      p.pola[klucz].value = "";
+      p.pola[klucz].removeAttribute("aria-invalid");
     }
   }
   $("komunikat").textContent = "";
   aktualizujSumy();
 });
 
-function dataDoNazwy() {
-  const teraz = new Date();
-  const dwieCyfry = n => String(n).padStart(2, "0");
-  return [
-    teraz.getFullYear(),
-    dwieCyfry(teraz.getMonth() + 1),
-    dwieCyfry(teraz.getDate())
-  ].join("-");
-}
-
 function masaDoWydruku(p) {
   const dziesiatki = p.kg / 10;
   const najblizsza = Math.round(dziesiatki);
 
-  // Nie doliczaj 10 kg za sam błąd zapisu liczby zmiennoprzecinkowej.
+  // Nie doliczaj 10 kg z powodu błędu zapisu liczby zmiennoprzecinkowej.
   if (p.zrodlo !== "kg" && najblizsza > 0 &&
-      Math.abs(dziesiatki - najblizsza) <=
-        2 * Number.EPSILON * najblizsza) {
+      Math.abs(dziesiatki - najblizsza) <= 2 * Number.EPSILON * najblizsza) {
     return najblizsza * 10;
   }
-
   return Math.ceil(dziesiatki) * 10;
 }
 
+function dataDoNazwy() {
+  const teraz = new Date();
+  const dwa = n => String(n).padStart(2, "0");
+  return `${teraz.getFullYear()}-${dwa(teraz.getMonth() + 1)}-${dwa(teraz.getDate())}`;
+}
+
 $("wydruk").addEventListener("click", () => {
-  if ($("wiersze").querySelector('[aria-invalid="true"]')) {
-    $("komunikat").textContent =
-      "Przed eksportem popraw błędne wpisy, także te ukryte przez filtry.";
+  if ($("profile").querySelector('[aria-invalid="true"]')) {
+    $("komunikat").textContent = "Popraw błędne wpisy, także te ukryte przez filtry.";
     return;
   }
 
   const wpisane = profile.filter(p => p.wpisany);
-  if (wpisane.length === 0) {
-    $("komunikat").textContent =
-      "Wpisz poprawną liczbę sztang, długość lub masę, aby utworzyć plik.";
+  if (!wpisane.length) {
+    $("komunikat").textContent = "Uzupełnij co najmniej jedno pole przed eksportem.";
     return;
   }
 
   let kgZamowienia = 0;
   const wiersze = wpisane.map(p => {
-    const kgPoZaokragleniu = masaDoWydruku(p);
-    kgZamowienia += kgPoZaokragleniu;
-    return `${p.nazwa} mm | ścianka ${doPola.format(p.t)} mm | masa ${doPola.format(kgPoZaokragleniu)} kg`;
+    const kg = masaDoWydruku(p);
+    kgZamowienia += kg;
+    return `${p.nazwa} mm | ścianka ${doPola.format(p.t)} mm | masa ${doPola.format(kg)} kg`;
   });
 
   const { szt, m, kg } = obliczSumy(wpisane);
   wiersze.push(
     "",
     "PODSUMOWANIE ZAMÓWIENIA",
-    `Liczba pozycji profili: ${doPola.format(wpisane.length)}`,
+    `Liczba pozycji profili: ${wpisane.length}`,
     `Łączna liczba sztang (równoważnik sztang 6 m): ${doPola.format(szt)} szt.`,
     `Łączna długość: ${doPola.format(m)} m`,
     `Łączna masa przed zaokrągleniem: ${doPola.format(kg)} kg`,
-    `Łączna masa zamówienia (po zaokrągleniu każdej pozycji): ${doPola.format(kgZamowienia)} kg`
+    `Łączna masa po zaokrągleniu każdej pozycji: ${doPola.format(kgZamowienia)} kg`
   );
 
   const nazwa = `zamowienie_stal_${dataDoNazwy()}.txt`;
@@ -374,7 +365,7 @@ $("wydruk").addEventListener("click", () => {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(adres), 30000);
-  $("komunikat").textContent = `Plik do pobrania: ${nazwa}`;
+  $("komunikat").textContent = `Plik TXT: ${nazwa}`;
 });
 
 filtruj();

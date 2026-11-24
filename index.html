@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#174a82">
+<link rel="manifest" href="./manifest.webmanifest">
+<title>Kalkulator masy profili stalowych</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: max(14px, env(safe-area-inset-top))
+             max(14px, env(safe-area-inset-right))
+             max(18px, env(safe-area-inset-bottom))
+             max(14px, env(safe-area-inset-left));
+    font: 16px system-ui, sans-serif;
+    color: #182433;
+    background: #f4f7fb;
+  }
+  main { max-width: 42rem; margin: 0 auto; }
+  h1 { margin: 0 0 8px; font-size: 1.45rem; }
+  .opis { margin: 0 0 14px; }
+  .filtry, .pola, .sumy { display: grid; gap: 8px; }
+  .filtry { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pelna { grid-column: 1 / -1; }
+  button, input, select {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 8px;
+    border: 1px solid #8293a6;
+    border-radius: 8px;
+    background: #fff;
+    color: inherit;
+    font: inherit;
+  }
+  button { cursor: pointer; }
+  #wydruk, button[aria-pressed="true"] {
+    background: #174a82;
+    border-color: #174a82;
+    color: #fff;
+  }
+  .sumy, .pola { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sumy {
+    margin: 12px 0;
+    padding: 10px;
+    border-radius: 10px;
+    background: #dceafb;
+  }
+  .sumy div { min-width: 0; overflow-wrap: anywhere; }
+  .sumy strong { display: block; font-variant-numeric: tabular-nums; }
+  .podpis, .pola label { font-size: .82rem; }
+  .karta {
+    min-width: 0;
+    margin: 0 0 8px;
+    padding: 10px;
+    border: 1px solid #cbd6e2;
+    border-radius: 10px;
+    background: #fff;
+  }
+  .karta h2 { margin: 0 0 7px; font-size: 1rem; overflow-wrap: anywhere; }
+  .pola label { display: grid; min-width: 0; gap: 3px; }
+  .pola input { text-align: right; font-size: 16px; }
+  .pola input:not(:placeholder-shown) { background: #e7f3ff; }
+  input[aria-invalid="true"] { outline: 2px solid #b42318; }
+  #komunikat:empty, [hidden] { display: none !important; }
+  #offline { font-size: .85rem; }
+  @media (max-width: 320px) {
+    .filtry { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Kalkulator masy profili stalowych</h1>
+  <p class="opis">Wpisz sztangi, metry lub kilogramy. Pozostałe pola przeliczą się automatycznie. Jedna sztanga ma 6 m.</p>
+
+  <div class="filtry">
+    <button id="typowe" type="button" aria-pressed="true">Profile typowe</button>
+    <button id="wydruk" type="button">Eksport TXT</button>
+    <select id="rodzaj" aria-label="Rodzaj profilu">
+      <option value="">Wszystkie rodzaje</option>
+      <option>Kwadratowy</option>
+      <option>Prostokątny</option>
+      <option>Okrągły</option>
+      <option>Płaskoowalny</option>
+      <option>Półowalny</option>
+    </select>
+    <button id="wyczysc" type="button">Wyczyść wpisy</button>
+    <input id="szukaj" class="pelna" type="search" aria-label="Szukaj profilu"
+           placeholder="np. 40x20 lub fi76">
+  </div>
+
+  <section aria-label="Podsumowanie wszystkich wpisów">
+    <div class="sumy">
+      <div><span class="podpis">Sztangi</span><strong id="suma-szt">0</strong></div>
+      <div><span class="podpis">Długość</span><strong id="suma-m">0 m</strong></div>
+      <div><span class="podpis">Masa</span><strong id="suma-kg">0 kg</strong></div>
+    </div>
+    <p class="podpis">Sumy obejmują też wpisy ukryte przez filtry.</p>
+  </section>
+
+  <p id="komunikat" role="status"></p>
+  <p id="offline" hidden>Gotowe do pracy bez internetu.</p>
+  <p id="brak" hidden>Brak pasujących profili. Spróbuj wyłączyć filtr „Profile typowe”.</p>
+
+  <div id="profile" aria-label="Lista profili"></div>
+</main>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+const DLUGOSC = 6;
+const SCIANKI = [1, 1.5, 2, 3];
+const KLUCZE = ["szt", "m", "kg"];
+const profile = [];
+const widok = new Intl.NumberFormat("pl-PL", { maximumFractionDigits: 3 });
+const doPola = new Intl.NumberFormat("pl-PL", {
+  useGrouping: false,
+  maximumFractionDigits: 6
+});
+
+const typowe = new Set([
+  ...[10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
+    .map(n => `Kwadratowy|${n}×${n}`),
+  ...["30×20", "40×20", "50×20", "60×20", "70×20", "80×20",
+      "40×30", "50×30", "60×30", "70×30", "80×30"]
+    .map(w => `Prostokątny|${w}`),
+  ...[25, 28, 30, 35, 40, 50, 60, 76].map(d => `Okrągły|Ø${d}`),
+  "Płaskoowalny|50×30", "Płaskoowalny|60×30",
+  "Półowalny|40×20", "Półowalny|40×30"
+]);
+
+function dodaj(rodzaj, przekroj, t, kgNaM) {
+  profile.push({
+    rodzaj, przekroj, t, kgNaM,
+    nazwa: `${rodzaj} ${przekroj}`,
+    typowy: t === 1.5 && typowe.has(`${rodzaj}|${przekroj}`),
+    wpisany: false, szt: 0, m: 0, kg: 0
+  });
+}
+
+for (const [rodzaj, przekroj, masy] of [
+  ["Płaskoowalny", "50×30", [1.03, 1.53, 2.01, 2.94]],
+  ["Płaskoowalny", "60×30", [1.19, 1.76, 2.32, 3.41]],
+  ["Półowalny",   "40×20", [0.79, 1.17, 1.53, 2.24]],
+  ["Półowalny",   "40×30", [0.97, 1.43, 1.88, 2.74]]
+]) {
+  SCIANKI.forEach((t, i) => dodaj(rodzaj, przekroj, t, masy[i]));
+}
+
+const masaZPola = pole => pole * 7850 / 1e6;
+
+function dodajCzworokat(rodzaj, a, b) {
+  for (const t of SCIANKI) {
+    const pole = a * b - (a - 2 * t) * (b - 2 * t)
+      - (4 - Math.PI) * 3 * t ** 2;
+    dodaj(rodzaj, `${a}×${b}`, t, masaZPola(pole));
+  }
+}
+
+for (let a = 10; a <= 100; a += 5) {
+  dodajCzworokat("Kwadratowy", a, a);
+}
+for (let a = 15; a <= 100; a += 5) {
+  for (let b = 10; b <= 50 && b < a; b += 5) {
+    dodajCzworokat("Prostokątny", a, b);
+  }
+}
+
+const srednice = [28, 76];
+for (let d = 15; d <= 100; d += 5) srednice.push(d);
+for (const d of srednice.sort((a, b) => a - b)) {
+  for (const t of d === 28 ? [1.5] : SCIANKI) {
+    dodaj("Okrągły", `Ø${d}`, t, masaZPola(Math.PI * t * (d - t)));
+  }
+}
+
+function obliczSumy(lista) {
+  const suma = { szt: 0, m: 0, kg: 0 };
+  for (const p of lista) {
+    for (const klucz of KLUCZE) suma[klucz] += p[klucz];
+  }
+  return suma;
+}
+
+function aktualizujSumy() {
+  const { szt, m, kg } = obliczSumy(profile);
+  $("suma-szt").textContent = widok.format(szt);
+  $("suma-m").textContent = `${widok.format(m)} m`;
+  $("suma-kg").textContent = `${widok.format(kg)} kg`;
+}
+
+function przelicz(p, zrodlo) {
+  $("komunikat").textContent = "";
+  const tekst = p.pola[zrodlo].value.replace(/\s/g, "");
+  const n = Number(tekst.replace(",", "."));
+  const m = zrodlo === "m" ? n : zrodlo === "szt" ? n * DLUGOSC : n / p.kgNaM;
+  const wyniki = {
+    szt: zrodlo === "szt" ? n : m / DLUGOSC,
+    m,
+    kg: zrodlo === "kg" ? n : m * p.kgNaM
+  };
+  const poprawne = /^(?:\d+(?:[.,]\d*)?|[.,]\d+)$/.test(tekst)
+    && Object.values(wyniki).every(Number.isFinite);
+
+  p.wpisany = poprawne;
+  p.zrodlo = zrodlo;
+
+  for (const klucz of KLUCZE) {
+    const input = p.pola[klucz];
+    input.removeAttribute("aria-invalid");
+    p[klucz] = poprawne ? wyniki[klucz] : 0;
+    if (klucz !== zrodlo) input.value = poprawne ? doPola.format(p[klucz]) : "";
+  }
+
+  if (tekst !== "" && !poprawne) {
+    p.pola[zrodlo].setAttribute("aria-invalid", "true");
+  }
+  aktualizujSumy();
+}
+
+function normalizuj(s) {
+  return s.toLowerCase().replace(/×/g, "x").replace(/[ø⌀]/g, "fi")
+    .replace(/,/g, ".").replace(/\s/g, "");
+}
+
+function stworzKarte(p, i) {
+  const karta = document.createElement("section");
+  karta.className = "karta";
+  const tytul = document.createElement("h2");
+  tytul.id = `profil-${i}`;
+  tytul.textContent = `${p.nazwa} · ścianka ${widok.format(p.t)} mm`;
+  karta.setAttribute("aria-labelledby", tytul.id);
+
+  const pola = document.createElement("div");
+  pola.className = "pola";
+  p.pola = {};
+
+  for (const [klucz, opis] of [["szt", "Sztangi"], ["m", "Metry"], ["kg", "Kilogramy"]]) {
+    const etykieta = document.createElement("label");
+    const podpis = document.createElement("span");
+    podpis.id = `${tytul.id}-${klucz}`;
+    podpis.textContent = opis;
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.inputMode = "decimal";
+    input.autocomplete = "off";
+    input.placeholder = "—";
+    input.setAttribute("aria-labelledby", `${podpis.id} ${tytul.id}`);
+    input.addEventListener("input", () => przelicz(p, klucz));
+
+    etykieta.append(podpis, input);
+    pola.append(etykieta);
+    p.pola[klucz] = input;
+  }
+
+  karta.append(tytul, pola);
+  p.karta = karta;
+  p.szukany = normalizuj(`${p.nazwa}×${p.t}`);
+  return karta;
+}
+
+const karty = document.createDocumentFragment();
+profile.forEach((p, i) => karty.append(stworzKarte(p, i)));
+$("profile").append(karty);
+
+function filtruj() {
+  const tylkoTypowe = $("typowe").getAttribute("aria-pressed") === "true";
+  const rodzaj = $("rodzaj").value;
+  const zapytanie = normalizuj($("szukaj").value);
+  let widoczne = 0;
+
+  for (const p of profile) {
+    p.karta.hidden = (tylkoTypowe && !p.typowy)
+      || (rodzaj !== "" && p.rodzaj !== rodzaj)
+      || !p.szukany.includes(zapytanie);
+    if (!p.karta.hidden) widoczne++;
+  }
+  $("brak").hidden = widoczne !== 0;
+}
+
+$("typowe").addEventListener("click", () => {
+  const przycisk = $("typowe");
+  const wlaczony = przycisk.getAttribute("aria-pressed") === "true";
+  przycisk.setAttribute("aria-pressed", String(!wlaczony));
+  filtruj();
+});
+$("rodzaj").addEventListener("change", filtruj);
+$("szukaj").addEventListener("input", filtruj);
+
+$("wyczysc").addEventListener("click", () => {
+  for (const p of profile) {
+    p.wpisany = false;
+    for (const klucz of KLUCZE) {
+      p[klucz] = 0;
+      p.pola[klucz].value = "";
+      p.pola[klucz].removeAttribute("aria-invalid");
+    }
+  }
+  $("komunikat").textContent = "";
+  aktualizujSumy();
+});
+
+function masaDoWydruku(p) {
+  const dziesiatki = p.kg / 10;
+  const najblizsza = Math.round(dziesiatki);
+
+  // Nie doliczaj 10 kg z powodu błędu zapisu liczby zmiennoprzecinkowej.
+  if (p.zrodlo !== "kg" && najblizsza > 0 &&
+      Math.abs(dziesiatki - najblizsza) <= 2 * Number.EPSILON * najblizsza) {
+    return najblizsza * 10;
+  }
+  return Math.ceil(dziesiatki) * 10;
+}
+
+function dataDoNazwy() {
+  const teraz = new Date();
+  const dwa = n => String(n).padStart(2, "0");
+  return `${teraz.getFullYear()}-${dwa(teraz.getMonth() + 1)}-${dwa(teraz.getDate())}`;
+}
+
+$("wydruk").addEventListener("click", () => {
+  if ($("profile").querySelector('[aria-invalid="true"]')) {
+    $("komunikat").textContent = "Popraw błędne wpisy, także te ukryte przez filtry.";
+    return;
+  }
+
+  const wpisane = profile.filter(p => p.wpisany);
+  if (!wpisane.length) {
+    $("komunikat").textContent = "Uzupełnij co najmniej jedno pole przed eksportem.";
+    return;
+  }
+
+  let kgZamowienia = 0;
+  const wiersze = wpisane.map(p => {
+    const kg = masaDoWydruku(p);
+    kgZamowienia += kg;
+    return `${p.nazwa} mm | ścianka ${doPola.format(p.t)} mm | masa ${doPola.format(kg)} kg`;
+  });
+
+  const { szt, m, kg } = obliczSumy(wpisane);
+  wiersze.push(
+    "",
+    "PODSUMOWANIE ZAMÓWIENIA",
+    `Liczba pozycji profili: ${wpisane.length}`,
+    `Łączna liczba sztang (równoważnik sztang 6 m): ${doPola.format(szt)} szt.`,
+    `Łączna długość: ${doPola.format(m)} m`,
+    `Łączna masa przed zaokrągleniem: ${doPola.format(kg)} kg`,
+    `Łączna masa po zaokrągleniu każdej pozycji: ${doPola.format(kgZamowienia)} kg`
+  );
+
+  const nazwa = `zamowienie_stal_${dataDoNazwy()}.txt`;
+  const plik = new Blob(["\uFEFF", wiersze.join("\r\n"), "\r\n"], {
+    type: "text/plain;charset=utf-8"
+  });
+  const adres = URL.createObjectURL(plik);
+  const link = document.createElement("a");
+  link.href = adres;
+  link.download = nazwa;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(adres), 30000);
+  $("komunikat").textContent = `Plik TXT: ${nazwa}`;
+});
+
+filtruj();
+
+if (window.isSecureContext && "serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js")
+    .then(() => navigator.serviceWorker.ready)
+    .then(() => { $("offline").hidden = false; })
+    .catch(blad => console.warn("Nie udało się przygotować trybu offline:", blad));
+}
+</script>
+</body>
+</html>
